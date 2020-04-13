@@ -1,0 +1,89 @@
+service: swarm-scan
+plugins:
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: ${opt:stage, 'development'}
+  region: ${opt:region, 'us-east-1'}
+  scanLimit: ${opt:limit, 1000}
+  account: ${env:AWS_ACCOUNT_NUMBER, '1234567890'}
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - logs:CreateLogGroup
+        - logs:CreateLogStream
+        - logs:PutLogEvents
+      Resource: '*'
+package:
+  individually: true
+  exclude:
+    - package*
+    - .gitignore
+    - README.md
+    - env*
+
+functions:
+  launcher:
+    name: ${self:provider.stage}-scan-launcher
+    handler: launcher.handler
+    timeout: 30
+    memorySize: 128
+    environment:
+      MAX_ITEMS_PER_WORKER: ${self:provider.scanLimit}
+      SQS_QUEUE_URL: 'https://sqs.${self:provider.region}.amazonaws.com/${self:provider.account}/${self:provider.stage}-scan-triggers'
+    package:
+      exclude:
+        - scanner.js
+    events:
+      - schedule:
+          rate: rate(24 hours)
+          enabled: true
+          input:
+            table: 'test-scanner'
+    iamRoleStatementsName: ${self:provider.stage}-scan-launcher
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+          - 'sqs:SendMessage'
+        Resource: 'arn:aws:sqs:${self:provider.region}:${self:provider.account}:${self:provider.stage}-scan-triggers'
+      - Effect: 'Allow'
+        Action:
+          - 'dynamodb:List*'
+          - 'dynamodb:Describe*'
+        Resource: 'arn:aws:dynamodb:${self:provider.region}:${self:provider.account}:table/*'
+
+  scanner:
+    name: ${self:provider.stage}-scanner
+    handler: scanner.handler
+    timeout: 300
+    memorySize: 256
+    environment:
+      AWS_REGION: ${self:provider.region}
+    package:
+      exclude:
+        - launcher.js
+    events:
+      - sqs:
+          arn: 'arn:aws:sqs:${self:provider.region}:${self:provider.account}:${self:provider.stage}-scan-triggers'
+          batchSize: 1
+    iamRoleStatementsName: ${self:provider.stage}-scanner
+    iamRoleStatementsInherit: true
+    iamRoleStatements:
+      - Effect: 'Allow'
+        Action:
+          - 'dynamodb:List*'
+          - 'dynamodb:Describe*'
+          - 'dynamodb:Scan'
+        Resource: 'arn:aws:dynamodb:${self:provider.region}:${self:provider.account}:table/*'
+
+resources:
+  Resources:
+    ScanTriggers:
+      Type: 'AWS::SQS::Queue'
+      Properties:
+        QueueName: '${self:provider.stage}-scan-triggers'
+        VisibilityTimeout: 300
+

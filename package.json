@@ -1,0 +1,56 @@
+{
+  "name": "swarm-scan",
+  "version": "1.0.0",
+  "description": "a serverless solution to distributed scanning of large dynamodb tables",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "serverless",
+    "dynamodb",
+    "dynamo",
+    "scan"
+  ],
+  "author": "Chris Oyler <christopher.oyler@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "aws-sdk": "2.656.0",
+    "eslint": "6.8.0",
+    "eslint-config-prettier": "6.10.1",
+    "eslint-plugin-prettier": "3.1.2",
+    "prettier": "2.0.4",
+    "serverless": "1.67.3",
+    "serverless-iam-roles-per-function": "2.0.2"
+  },
+  "prettier": {
+    "printWidth": 120,
+    "singleQuote": true,
+    "trailingComma": "es5",
+    "arrowParens": "always"
+  },
+  "eslintConfig": {
+    "extends": [
+      "eslint:recommended",
+      "prettier"
+    ],
+    "plugins": [
+      "prettier"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2018,
+      "sourceType": "module"
+    },
+    "env": {
+      "node": true,
+      "es6": true
+    },
+    "rules": {
+      "prettier/prettier": "error",
+      "no-var": "error",
+      "prefer-const": "error",
+      "no-console": 0,
+      "require-atomic-updates": 0
+    }
+  }
+}
